@@ -1,0 +1,452 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserRole {
+  OWNER
+  ADMIN
+  EDITOR
+  VIEWER
+}
+
+enum AnalyticsEventType {
+  PAGE_VIEW
+  PRODUCT_VIEW
+  WHATSAPP_CLICK
+  HEARTBEAT
+  PLACEMENT_IMPRESSION
+  PLACEMENT_CLICK
+}
+
+enum ProductCategory {
+  VIP
+  PREMIUM
+  GOLD
+}
+
+enum SubscriptionPaymentType {
+  INITIAL
+  RENEWAL
+  MANUAL
+}
+
+enum ListingStatus {
+  DRAFT
+  PUBLISHED
+  PAUSED
+  ARCHIVED
+}
+
+enum PlacementType {
+  HOME_HERO
+  HOME_FEATURED
+  LISTINGS_FEATURED
+  DISTRICT_TOP
+  CATEGORY_TOP
+  DISTRICT_CATEGORY_TOP
+}
+
+enum ContentType {
+  BLOG
+  GUIDE
+}
+
+enum ContentStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+model User {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  role         UserRole @default(VIEWER)
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  auditLogs AuditLog[]
+  sessions  Session[]
+
+  @@index([role])
+  @@index([isActive])
+  @@index([createdAt])
+}
+
+model Product {
+  id               String  @id @default(cuid())
+  name             String
+  slug             String  @unique
+  shortDescription String?
+  description      String
+  detailTable      Json?
+  coverImage       String
+  coverImageAlt    String?
+  cardTag          String?
+  region           String?
+
+  // Faz 2: yeni ilan mimarisine geçiş alanları.
+  // Eski kayıtlar bozulmasın diye ilişkiler başlangıçta opsiyoneldir.
+  districtId     String?
+  neighborhoodId String?
+  categoryId     String?
+  status         ListingStatus @default(PUBLISHED)
+  priority       Int           @default(0)
+  publishedAt    DateTime?
+  expiresAt      DateTime?
+  featuredOnHome     Boolean @default(false)
+  featuredOnListings Boolean @default(false)
+  featuredOnDistrict Boolean @default(false)
+  seoTitle       String?
+  seoDescription String?
+  canonicalUrl   String?
+  noIndex        Boolean @default(false)
+
+  /*
+   * Eski tekil WhatsApp alanı şimdilik korunuyor.
+   * Yeni sistem ProductWhatsappButton tablosu üzerinden
+   * sınırsız buton destekler.
+   *
+   * Mevcut eski kayıtlar bozulmasın diye bu alanı
+   * ileride temiz migration ile kaldırabiliriz.
+   */
+  whatsappNumber String?
+
+  category  ProductCategory @default(VIP)
+  sortOrder Int             @default(1)
+  isActive  Boolean         @default(true)
+
+  subscriptionFee    Decimal   @default(0) @db.Decimal(12, 2)
+  subscriptionEndsAt DateTime?
+  lastRenewedAt      DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  images          ProductImage[]
+  whatsappButtons ProductWhatsappButton[]
+  analyticsEvents AnalyticsEvent[]
+  payments        ProductPayment[]
+  district        District?      @relation(fields: [districtId], references: [id], onDelete: SetNull)
+  neighborhood    Neighborhood?  @relation(fields: [neighborhoodId], references: [id], onDelete: SetNull)
+  listingCategory ListingCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  placements      Placement[]
+
+  @@unique([category, sortOrder])
+  @@index([category, isActive, sortOrder])
+  @@index([region, isActive, sortOrder])
+  @@index([districtId, status, priority])
+  @@index([categoryId, status, priority])
+  @@index([neighborhoodId, status])
+  @@index([expiresAt])
+  @@index([subscriptionEndsAt])
+  @@index([createdAt])
+}
+
+model ProductWhatsappButton {
+  id          String   @id @default(cuid())
+  productId   String
+  label       String   @default("WhatsApp ile bilgi al")
+  phoneNumber String
+  sortOrder   Int      @default(0)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId, sortOrder])
+  @@index([isActive])
+}
+
+model ProductImage {
+  id        String   @id @default(cuid())
+  imageUrl  String
+  altText   String?
+  sortOrder Int      @default(0)
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@index([productId, sortOrder])
+}
+
+model AnalyticsEvent {
+  id          String             @id @default(cuid())
+  eventType   AnalyticsEventType
+  sessionId   String
+  visitorHash String
+  path        String
+  source      String?
+  referrer    String?
+  deviceType  String?
+  metadata    Json?
+  productId   String?
+  product     Product?           @relation(fields: [productId], references: [id], onDelete: SetNull)
+  placementId String?
+  placement   Placement?         @relation(fields: [placementId], references: [id], onDelete: SetNull)
+  createdAt   DateTime           @default(now())
+
+  @@index([eventType, createdAt])
+  @@index([productId, eventType, createdAt])
+  @@index([placementId, eventType, createdAt])
+  @@index([visitorHash, createdAt])
+  @@index([sessionId, createdAt])
+}
+
+model ActiveSession {
+  sessionId   String   @id
+  visitorHash String
+  currentPath String
+  productId   String?
+  deviceType  String?
+  source      String?
+  createdAt   DateTime @default(now())
+  lastSeenAt  DateTime @updatedAt
+
+  @@index([lastSeenAt])
+  @@index([productId])
+}
+
+model SiteSettings {
+  id              String   @id @default("default")
+  companyName     String   @default("Firma Kataloğu")
+  logoUrl         String?
+  headline        String   @default("Ürünlerimiz")
+  description     String   @default("Detaylarını incelemek istediğiniz ürüne dokunun.")
+
+  /*
+   * Ana WhatsApp numarası:
+   * - Anasayfadaki reklam alanları
+   * - Üründe özel WhatsApp butonu yoksa fallback
+   * - Genel iletişim
+   */
+  whatsappNumber  String   @default("905555555555")
+  whatsappMessage String   @default("Merhaba, ürün hakkında bilgi almak istiyorum.")
+
+  primaryColor    String   @default("#171717")
+  updatedAt       DateTime @updatedAt
+}
+
+model CategoryDisplaySetting {
+  id        String          @id @default(cuid())
+  category  ProductCategory @unique
+  slotCount Int             @default(0)
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+}
+
+model AuditLog {
+  id          String  @id @default(cuid())
+  action      String
+  entityType  String
+  entityId    String?
+  description String
+  changes     Json?
+
+  /**
+   * Kullanıcı daha sonra silinse bile logda
+   * işlem yapan kişinin bilgileri korunur.
+   * Alanlar mevcut eski log kayıtları nedeniyle
+   * şimdilik nullable olarak tanımlandı.
+   */
+  actorName  String?
+  actorEmail String?
+  actorRole  UserRole?
+
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([action, createdAt])
+  @@index([entityType, createdAt])
+  @@index([entityType, entityId])
+  @@index([createdAt])
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  tokenHash String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model DailyAnalytics {
+  id             String             @id @default(cuid())
+  date           DateTime           @db.Date
+  eventType      AnalyticsEventType
+  scopeKey       String
+  productId      String?
+  productName    String?
+  eventCount     Int                @default(0)
+  uniqueVisitors Int                @default(0)
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+
+  @@unique([date, eventType, scopeKey])
+  @@index([date, eventType])
+  @@index([productId, date])
+  @@index([scopeKey, date])
+}
+
+model ProductPayment {
+  id String @id @default(cuid())
+
+  productId   String?
+  productName String
+  category    ProductCategory
+
+  amount Decimal                 @db.Decimal(12, 2)
+  type   SubscriptionPaymentType @default(RENEWAL)
+
+  periodStart DateTime
+  periodEnd   DateTime
+  paidAt      DateTime @default(now())
+
+  note String?
+
+  product Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+
+  @@index([productId])
+  @@index([paidAt])
+  @@index([periodEnd])
+  @@index([category, paidAt])
+}
+
+model District {
+  id             String   @id @default(cuid())
+  name           String
+  slug           String   @unique
+  shortDescription String?
+  description    String?
+  coverImage     String?
+  seoTitle       String?
+  seoDescription String?
+  sortOrder      Int      @default(0)
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  neighborhoods Neighborhood[]
+  products      Product[]
+  contents      ContentPost[]
+  placements    Placement[]
+
+  @@index([isActive, sortOrder])
+}
+
+model Neighborhood {
+  id         String   @id @default(cuid())
+  districtId String
+  name       String
+  slug       String
+  isActive   Boolean  @default(true)
+  sortOrder  Int      @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  district District @relation(fields: [districtId], references: [id], onDelete: Cascade)
+  products Product[]
+
+  @@unique([districtId, slug])
+  @@index([districtId, isActive, sortOrder])
+}
+
+model ListingCategory {
+  id             String   @id @default(cuid())
+  name           String
+  slug           String   @unique
+  shortDescription String?
+  description    String?
+  seoTitle       String?
+  seoDescription String?
+  sortOrder      Int      @default(0)
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  products   Product[]
+  contents   ContentPost[]
+  placements Placement[]
+
+  @@index([isActive, sortOrder])
+}
+
+model Placement {
+  id         String        @id @default(cuid())
+  productId  String
+  type       PlacementType
+  districtId String?
+  categoryId String?
+  position   Int           @default(1)
+  startsAt   DateTime
+  expiresAt  DateTime
+  isActive   Boolean       @default(true)
+  note       String?
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+
+  product  Product          @relation(fields: [productId], references: [id], onDelete: Cascade)
+  district District?        @relation(fields: [districtId], references: [id], onDelete: Cascade)
+  category ListingCategory? @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  analyticsEvents AnalyticsEvent[]
+
+  @@index([type, isActive, startsAt, expiresAt])
+  @@index([districtId, type, position])
+  @@index([categoryId, type, position])
+  @@index([productId])
+}
+
+model ContentPost {
+  id             String        @id @default(cuid())
+  type           ContentType
+  status         ContentStatus @default(DRAFT)
+  title          String
+  slug           String        @unique
+  excerpt        String?
+  content        Json
+  coverImage     String?
+  districtId     String?
+  categoryId     String?
+  seoTitle       String?
+  seoDescription String?
+  canonicalUrl   String?
+  noIndex        Boolean       @default(false)
+  publishedAt    DateTime?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  district District?        @relation(fields: [districtId], references: [id], onDelete: SetNull)
+  category ListingCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
+  @@index([type, status, publishedAt])
+  @@index([districtId, type, status])
+  @@index([categoryId, type, status])
+}
+
+model SeoRedirect {
+  id          String   @id @default(cuid())
+  sourcePath  String   @unique
+  targetPath  String
+  statusCode  Int      @default(301)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([isActive])
+}
+
