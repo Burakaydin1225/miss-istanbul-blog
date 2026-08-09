@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { ContentType } from "@/generated/prisma/client";
+import { ContentType } from "@/lib/content-enums";
 import prisma from "@/lib/prisma";
 
 const PAGE_SIZE = 10;

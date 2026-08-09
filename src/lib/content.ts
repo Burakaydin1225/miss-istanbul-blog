@@ -1,4 +1,5 @@
-import { ContentStatus, ContentType, Prisma } from "@/generated/prisma/client";
+import { Prisma } from "@/generated/prisma/client";
+import { ContentStatus, ContentType } from "@/lib/content-enums";
 
 export type StoredContent = {
   body: string;

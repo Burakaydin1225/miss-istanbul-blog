@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import Link from "next/link";
-import { ContentType } from "@/generated/prisma/client";
+import { ContentType } from "@/lib/content-enums";
 import { HomeBlogFeed } from "@/components/blog/HomeBlogFeed";
 import { PublicLayout } from "@/components/public/PublicLayout";
 import prisma from "@/lib/prisma";

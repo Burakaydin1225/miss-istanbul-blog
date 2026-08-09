@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ContentType } from "@/generated/prisma/client";
+import { ContentType } from "@/lib/content-enums";
 import { ContentCard } from "@/components/content/ContentCard";
 import { PublicLayout } from "@/components/public/PublicLayout";
 import prisma from "@/lib/prisma";

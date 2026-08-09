@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import { ContentType } from "@/generated/prisma/client";
+import { ContentType } from "@/lib/content-enums";
 import { contentPath, contentTypeLabel } from "@/lib/content";
 
 type Props = {

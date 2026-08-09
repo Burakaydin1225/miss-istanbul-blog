@@ -82,8 +82,8 @@ export default function PanelShell({ children, userName, roleLabel, roleClassNam
     <aside className="flex h-full w-[276px] flex-col bg-[#111216] text-white">
       <div className="flex h-[76px] items-center justify-between border-b border-white/[0.07] px-5">
         <Link href="/panel" onClick={() => setMobileOpen(false)} className="flex min-w-0 items-center gap-3">
-          <span className="flex size-10 shrink-0 items-center justify-center rounded-[14px] bg-gradient-to-br from-fuchsia-500 to-violet-600 text-sm font-black shadow-lg shadow-fuchsia-950/30">MI</span>
-          <span className="min-w-0"><span className="block truncate text-sm font-extrabold tracking-tight">Miss İstanbul</span><span className="mt-0.5 block text-[10px] font-semibold uppercase tracking-[0.18em] text-white/35">Control Center</span></span>
+          <span className="flex size-10 shrink-0 items-center justify-center rounded-[14px] bg-gradient-to-br from-amber-300 via-yellow-500 to-amber-700 text-sm font-black shadow-lg shadow-fuchsia-950/30">MI</span>
+          <span className="min-w-0"><span className="block truncate text-sm font-extrabold tracking-tight">Miss İstanbul</span><span className="mt-0.5 block text-[10px] font-semibold uppercase tracking-[0.18em] text-white/35">Premium Blog</span></span>
         </Link>
         <button type="button" onClick={() => setMobileOpen(false)} className="rounded-xl p-2 text-white/50 hover:bg-white/10 hover:text-white lg:hidden" aria-label="Menüyü kapat"><Icon name="close"/></button>
       </div>
@@ -97,9 +97,9 @@ export default function PanelShell({ children, userName, roleLabel, roleClassNam
                 const active = isActive(item.href);
                 return (
                   <Link key={item.href} href={item.href} onClick={() => setMobileOpen(false)} className={`group flex min-h-11 items-center gap-3 rounded-[14px] px-3 text-[13px] font-semibold transition ${active ? "bg-white text-neutral-950 shadow-sm" : "text-white/58 hover:bg-white/[0.07] hover:text-white"}`}>
-                    <span className={active ? "text-fuchsia-600" : "text-white/38 group-hover:text-white/80"}><Icon name={item.icon}/></span>
+                    <span className={active ? "text-amber-600" : "text-white/38 group-hover:text-white/80"}><Icon name={item.icon}/></span>
                     <span className="flex-1 truncate">{item.label}</span>
-                    {item.badge ? <span className={`rounded-full px-2 py-0.5 text-[9px] font-black ${active ? "bg-fuchsia-100 text-fuchsia-700" : "bg-white/10 text-white/60"}`}>{item.badge}</span> : null}
+                    {item.badge ? <span className={`rounded-full px-2 py-0.5 text-[9px] font-black ${active ? "bg-amber-100 text-amber-800" : "bg-white/10 text-white/60"}`}>{item.badge}</span> : null}
                   </Link>
                 );
               })}
@@ -126,7 +126,7 @@ export default function PanelShell({ children, userName, roleLabel, roleClassNam
         <header className="sticky top-0 z-30 border-b border-black/[0.06] bg-white/90 backdrop-blur-xl">
           <div className="flex h-[76px] items-center gap-3 px-4 sm:px-6 xl:px-8">
             <button type="button" onClick={() => setMobileOpen(true)} className="rounded-xl border border-neutral-200 bg-white p-2.5 text-neutral-700 shadow-sm lg:hidden" aria-label="Menüyü aç"><Icon name="menu"/></button>
-            <div className="hidden max-w-[420px] flex-1 items-center gap-2 rounded-[14px] border border-neutral-200 bg-neutral-50 px-3.5 py-2.5 text-neutral-400 md:flex"><Icon name="search" className="size-4"/><span className="text-xs">Panelde ara...</span><span className="ml-auto rounded-md border border-neutral-200 bg-white px-1.5 py-0.5 text-[9px] font-bold text-neutral-400">⌘K</span></div>
+            <div className="hidden max-w-[420px] flex-1 items-center gap-2 rounded-[14px] border border-neutral-200 bg-neutral-50 px-3.5 py-2.5 text-neutral-400 md:flex"><Icon name="search" className="size-4"/><span className="text-xs">Yazılarda ara...</span><span className="ml-auto rounded-md border border-neutral-200 bg-white px-1.5 py-0.5 text-[9px] font-bold text-neutral-400">⌘K</span></div>
             <div className="ml-auto flex items-center gap-2">
               <Link href="/" target="_blank" className="hidden items-center gap-2 rounded-xl border border-neutral-200 bg-white px-3.5 py-2.5 text-xs font-bold text-neutral-600 shadow-sm transition hover:border-neutral-300 hover:text-neutral-950 sm:flex">Siteyi aç <Icon name="external" className="size-4"/></Link>
               <form action={logoutAction}><button type="submit" className="flex items-center gap-2 rounded-xl bg-neutral-950 px-3.5 py-2.5 text-xs font-bold text-white shadow-sm transition hover:bg-neutral-800"><Icon name="logout" className="size-4"/><span className="hidden sm:inline">Çıkış</span></button></form>
