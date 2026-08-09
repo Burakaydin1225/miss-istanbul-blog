@@ -107,10 +107,9 @@ export default function RootLayout({
   };
 
   return (
-    <html lang="tr">
+    <html lang="tr" data-scroll-behavior="smooth">
       <body>
-        <GoogleAnalytics />
-
+        {/* WebSite Schema */}
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
@@ -118,6 +117,7 @@ export default function RootLayout({
           }}
         />
 
+        {/* Organization Schema */}
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
@@ -125,9 +125,16 @@ export default function RootLayout({
           }}
         />
 
+        {/* Sayfa içeriği */}
         {children}
 
+        {/* Miss İstanbul kendi dahili analytics sistemi */}
         <AnalyticsTracker eventType="PAGE_VIEW" />
+
+        {/* Google Analytics 4 */}
+        {process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID ? (
+          <GoogleAnalytics />
+        ) : null}
       </body>
     </html>
   );

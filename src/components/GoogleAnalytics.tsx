@@ -1,67 +1,62 @@
 "use client";
 
 import Script from "next/script";
-import { usePathname } from "next/navigation";
 import {
+  usePathname,
+  useSearchParams,
+} from "next/navigation";
+import {
+  Suspense,
   useEffect,
-  useRef,
+  useState,
 } from "react";
 
 const gaMeasurementId =
   process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID?.trim();
 
-type GtagWindow = Window & {
-  gtag?: (
-    command: "config" | "event" | "js",
-    targetIdOrEventName: string | Date,
-    parameters?: Record<
-      string,
-      string | number | boolean | null | undefined
-    >,
-  ) => void;
-};
+type GtagFunction = (
+  command: "config" | "event" | "js",
+  targetIdOrEventName: string | Date,
+  parameters?: Record<
+    string,
+    string | number | boolean | null | undefined
+  >,
+) => void;
 
-export function GoogleAnalytics() {
+function GoogleAnalyticsPageView() {
   const pathname = usePathname();
-  const previousPathRef = useRef<string | null>(
-    null,
-  );
+  const searchParams = useSearchParams();
+  const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
     if (
       !gaMeasurementId ||
+      !isReady ||
       typeof window === "undefined"
     ) {
       return;
     }
 
-    const currentPath =
-      window.location.pathname +
-      window.location.search;
+    const gtag = (window as Window & {
+      gtag?: GtagFunction;
+    }).gtag;
 
-    if (previousPathRef.current === null) {
-      previousPathRef.current = currentPath;
+    if (typeof gtag !== "function") {
       return;
     }
 
-    if (previousPathRef.current === currentPath) {
-      return;
-    }
+    const query = searchParams.toString();
 
-    previousPathRef.current = currentPath;
+    const pagePath = query
+      ? `${pathname}?${query}`
+      : pathname;
 
-    const gtagWindow = window as GtagWindow;
-
-    if (typeof gtagWindow.gtag !== "function") {
-      return;
-    }
-
-    gtagWindow.gtag("config", gaMeasurementId, {
-      page_path: currentPath,
+    gtag("event", "page_view", {
+      page_path: pagePath,
       page_location: window.location.href,
       page_title: document.title,
     });
-  }, [pathname]);
+  }, [pathname, searchParams, isReady]);
 
   if (!gaMeasurementId) {
     return null;
@@ -73,6 +68,9 @@ export function GoogleAnalytics() {
         id="google-analytics-script"
         src={`https://www.googletagmanager.com/gtag/js?id=${gaMeasurementId}`}
         strategy="afterInteractive"
+        onLoad={() => {
+          setIsReady(true);
+        }}
       />
 
       <Script
@@ -81,17 +79,33 @@ export function GoogleAnalytics() {
         dangerouslySetInnerHTML={{
           __html: `
             window.dataLayer = window.dataLayer || [];
-            function gtag(){dataLayer.push(arguments);}
+
+            function gtag(){
+              dataLayer.push(arguments);
+            }
+
             window.gtag = window.gtag || gtag;
+
             gtag('js', new Date());
+
             gtag('config', '${gaMeasurementId}', {
-              page_path: window.location.pathname + window.location.search,
-              page_location: window.location.href,
-              page_title: document.title
+              send_page_view: false
             });
           `,
         }}
       />
     </>
+  );
+}
+
+export function GoogleAnalytics() {
+  if (!gaMeasurementId) {
+    return null;
+  }
+
+  return (
+    <Suspense fallback={null}>
+      <GoogleAnalyticsPageView />
+    </Suspense>
   );
 }
