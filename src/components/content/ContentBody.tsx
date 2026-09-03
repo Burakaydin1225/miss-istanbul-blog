@@ -5,6 +5,26 @@ type Props = {
   body: string;
 };
 
+function isInternalHref(href: string) {
+  return (
+    href.startsWith("/") ||
+    href.startsWith("https://www.missistanbull.com") ||
+    href.startsWith("https://missistanbull.com")
+  );
+}
+
+function normalizeInternalHref(href: string) {
+  if (href.startsWith("https://www.missistanbull.com")) {
+    return href.replace("https://www.missistanbull.com", "") || "/";
+  }
+
+  if (href.startsWith("https://missistanbull.com")) {
+    return href.replace("https://missistanbull.com", "") || "/";
+  }
+
+  return href;
+}
+
 function renderInlineLinks(text: string): ReactNode[] {
   const linkPattern = /\[([^\]]+)\]\(([^)]+)\)/g;
 
@@ -19,28 +39,17 @@ function renderInlineLinks(text: string): ReactNode[] {
       parts.push(text.slice(lastIndex, match.index));
     }
 
-    const isInternalLink =
-      href.startsWith("/") ||
-      href.startsWith("https://www.missistanbull.com") ||
-      href.startsWith("https://missistanbull.com");
+    if (label.startsWith("cta:")) {
+      parts.push(fullMatch);
+      lastIndex = match.index + fullMatch.length;
+      continue;
+    }
 
-    if (isInternalLink) {
-      let internalHref = href;
-
-      if (href.startsWith("https://www.missistanbull.com")) {
-        internalHref =
-          href.replace("https://www.missistanbull.com", "") || "/";
-      }
-
-      if (href.startsWith("https://missistanbull.com")) {
-        internalHref =
-          href.replace("https://missistanbull.com", "") || "/";
-      }
-
+    if (isInternalHref(href)) {
       parts.push(
         <Link
           key={`${match.index}-${href}`}
-          href={internalHref}
+          href={normalizeInternalHref(href)}
           className="font-semibold text-sky-700 underline decoration-sky-300 underline-offset-4 transition hover:text-sky-900 hover:decoration-sky-600"
         >
           {label}
@@ -51,8 +60,7 @@ function renderInlineLinks(text: string): ReactNode[] {
         <a
           key={`${match.index}-${href}`}
           href={href}
-          target="_blank"
-          rel="noopener noreferrer"
+          rel="nofollow"
           className="font-semibold text-sky-700 underline decoration-sky-300 underline-offset-4 transition hover:text-sky-900 hover:decoration-sky-600"
         >
           {label}
@@ -70,6 +78,37 @@ function renderInlineLinks(text: string): ReactNode[] {
   return parts;
 }
 
+function renderCta(block: string, index: number): ReactNode | null {
+  const match = block.match(/^\[cta:([^\]]+)\]\(([^)]+)\)$/);
+
+  if (!match) {
+    return null;
+  }
+
+  const [, label, href] = match;
+
+  const className =
+    "inline-flex min-h-12 items-center justify-center rounded-xl bg-neutral-950 px-5 py-3 text-sm font-black text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-neutral-800 active:scale-[0.99]";
+
+  if (isInternalHref(href)) {
+    return (
+      <div key={index} className="py-2">
+        <Link href={normalizeInternalHref(href)} className={className}>
+          {label}
+        </Link>
+      </div>
+    );
+  }
+
+  return (
+    <div key={index} className="py-2">
+      <a href={href} rel="nofollow" className={className}>
+        {label}
+      </a>
+    </div>
+  );
+}
+
 export function ContentBody({ body }: Props) {
   const blocks = body
     .split(/\n{2,}/)
@@ -79,6 +118,12 @@ export function ContentBody({ body }: Props) {
   return (
     <div className="space-y-5 text-[17px] leading-8 text-neutral-700">
       {blocks.map((block, index) => {
+        const cta = renderCta(block, index);
+
+        if (cta) {
+          return cta;
+        }
+
         if (block.startsWith("## ")) {
           return (
             <h2
